@@ -1,3 +1,4 @@
+import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from PIL import Image, ImageDraw
@@ -5,13 +6,12 @@ import asyncio
 import io
 import re
 
-TOKEN = "8743646770:AAGkNZmJctsgZ5wVt6_Aay5Kgal9zbBXvnc"
+TOKEN = os.getenv("TOKEN")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 def parse_request(text):
-    # "800x800 sariq" kabi matnni tahlil qilish
     match = re.match(r'(\d+)x(\d+)\s+(\w+)', text.lower())
     if match:
         width = int(match.group(1))
@@ -43,15 +43,10 @@ async def generate_image(message: types.Message):
     if result:
         width, height, color_name = result
         color = COLORS.get(color_name, color_name)
-        
-        # Rasm yaratish
         img = Image.new("RGB", (width, height), color=color)
-        
-        # Rasmni xotiraga saqlash
         buf = io.BytesIO()
         img.save(buf, format="PNG")
         buf.seek(0)
-        
         await message.answer_document(
             types.BufferedInputFile(buf.read(), filename=f"{width}x{height}_{color_name}.png")
         )
