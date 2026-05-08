@@ -38,7 +38,7 @@ async def start(message: types.Message):
     await message.answer("Salom! 👋\nMenga rasm o'lchamini va rangini yozing!\nMasalan: 800x800 sariq")
 
 @dp.message()
-async def generate_image(message: types.Message):
+async def handle_message(message: types.Message):
     result = parse_request(message.text)
     if result:
         width, height, color_name = result
