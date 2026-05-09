@@ -128,12 +128,11 @@ async def start(message: types.Message):
 @dp.callback_query(F.data == "oyin")
 async def oyin_menu(callback: types.CallbackQuery):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🤖 Botga qarshi", callback_data="start_bot_game")],
-        [InlineKeyboardButton(text="👥 2 kishi birga", callback_data="start_multi_game")],
+        [InlineKeyboardButton(text="🃏 Durak o'yini", url="https://saparberdi20-hue.github.io/telegram-bot/durak.html")],
         [InlineKeyboardButton(text="🔙 Orqaga", callback_data="back_main")]
     ])
     await callback.message.edit_text(
-        "🎲 DOMINO O'YINI\n\nQanday o'ynaysiz?",
+        "🎮 O'yinlar\n\nDurak o'yinini bosing va o'ynang!",
         reply_markup=keyboard
     )
     await callback.answer()
