@@ -1,0 +1,554 @@
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Durak O'yini</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
+body{background:radial-gradient(ellipse at center,#1b6b3a 0%,#0d3d20 70%,#071f10 100%);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px;gap:10px}
+.screen{width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.hidden{display:none!important}
+h1{color:#f0d060;font-size:28px;font-weight:700;margin-top:40px}
+.menu-btn{width:280px;padding:18px 24px;border-radius:14px;border:none;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:12px}
+.btn-bot{background:#4ade80;color:#0d2b1a}
+.btn-multi{background:#60a5fa;color:#0d1f4a}
+.menu-icon{font-size:28px}
+.menu-btn-text{display:flex;flex-direction:column;align-items:flex-start}
+.menu-btn-label{font-size:16px;font-weight:700}
+.menu-btn-desc{font-size:12px;opacity:0.8;font-weight:400}
+.info-box{background:rgba(0,0,0,0.4);padding:16px 20px;border-radius:12px;color:#fff;text-align:center;width:100%;max-width:480px}
+.info-box input{width:100%;padding:10px;border-radius:8px;border:none;font-size:16px;margin:8px 0;text-align:center}
+.info-box button{padding:10px 24px;border-radius:8px;border:none;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px}
+.btn-create{background:#4ade80;color:#0d2b1a}
+.btn-join{background:#60a5fa;color:#0d1f4a}
+.game-id-display{font-size:28px;font-weight:700;color:#f0d060;letter-spacing:4px;margin:8px 0}
+.top-bar{display:flex;gap:10px;background:rgba(0,0,0,0.4);padding:8px 16px;border-radius:20px;width:100%;max-width:480px;justify-content:center}
+.score{color:#f0d060;font-size:12px;text-align:center}
+.score b{display:block;font-size:16px;color:#fff}
+.card{width:48px;height:70px;background:#fff;border-radius:6px;border:1.5px solid #ccc;box-shadow:2px 4px 8px rgba(0,0,0,0.4);display:flex;flex-direction:column;justify-content:space-between;padding:3px;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;user-select:none;flex-shrink:0}
+.card:hover{transform:translateY(-6px) scale(1.06)}
+.card.selected{transform:translateY(-10px) scale(1.08);box-shadow:0 0 0 3px #f0d060}
+.card.playable{box-shadow:0 0 0 2px #4ade80}
+.card.back{background:repeating-linear-gradient(45deg,#1a3a8a,#1a3a8a 5px,#c0392b 5px,#c0392b 10px);cursor:default}
+.cv{font-size:11px;font-weight:700;line-height:1}
+.cs{font-size:14px;text-align:center}
+.cvb{font-size:11px;font-weight:700;line-height:1;transform:rotate(180deg);align-self:flex-end}
+.red{color:#c0392b}.black{color:#1a1a1a}
+.felt{width:100%;max-width:480px;min-height:130px;background:#155228;border-radius:16px;border:5px solid #8B6914;padding:10px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;justify-content:center;position:relative}
+.felt-label{position:absolute;top:5px;left:10px;color:rgba(255,255,255,0.3);font-size:11px}
+.hand-area{width:100%;max-width:480px;background:rgba(0,0,0,0.3);border-radius:12px;padding:10px}
+.hand-label{color:#a0d0a0;font-size:12px;margin-bottom:6px}
+.hand-tiles{display:flex;flex-wrap:wrap;gap:4px}
+.btn-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.btn{padding:8px 12px;border-radius:8px;border:none;font-size:12px;font-weight:600;cursor:pointer}
+.btn-green{background:#4ade80;color:#0d2b1a}
+.btn-red{background:#f87171;color:#2b0000}
+.btn-yellow{background:#f0d060;color:#2b1a00}
+.btn-gray{background:rgba(255,255,255,0.2);color:#fff}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.bot-area{width:100%;max-width:480px;background:rgba(0,0,0,0.2);border-radius:12px;padding:10px;display:flex;align-items:center;gap:8px}
+.trump-area{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.3);padding:6px 12px;border-radius:10px}
+.trump-label{color:#f0d060;font-size:12px}
+.status{color:#fff;font-size:13px;text-align:center;background:rgba(0,0,0,0.35);padding:8px 14px;border-radius:10px;width:100%;max-width:480px;min-height:36px}
+.phase-badge{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;margin-left:auto}
+.attack-badge{background:#f0d060;color:#2b1a00}
+.defend-badge{background:#f87171;color:#2b0000}
+</style>
+</head>
+<body>
+
+<!-- MENU -->
+<div id="menu-screen" class="screen">
+  <h1>🃏 DURAK</h1>
+  <p style="color:#a0d0a0;font-size:14px">O'yin turini tanlang</p>
+  <button class="menu-btn btn-bot" onclick="startBot()">
+    <div class="menu-icon">🤖</div>
+    <div class="menu-btn-text">
+      <div class="menu-btn-label">Botga qarshi</div>
+      <div class="menu-btn-desc">Sun'iy intellektga qarshi</div>
+    </div>
+  </button>
+  <button class="menu-btn btn-multi" onclick="showMultiMenu()">
+    <div class="menu-icon">👥</div>
+    <div class="menu-btn-text">
+      <div class="menu-btn-label">2 kishi birga</div>
+      <div class="menu-btn-desc">Do'stingiz bilan online</div>
+    </div>
+  </button>
+</div>
+
+<!-- MULTI MENU -->
+<div id="multi-screen" class="screen hidden">
+  <h1>👥 Online O'yin</h1>
+  <div class="info-box">
+    <p style="margin-bottom:8px">Yangi o'yin yaratish:</p>
+    <button class="btn-create" style="padding:12px 32px;border-radius:10px;font-size:15px;font-weight:700;border:none;cursor:pointer;width:100%" onclick="createGame()">🎮 O'yin yaratish</button>
+  </div>
+  <div class="info-box">
+    <p style="margin-bottom:8px">Do'stingiz o'yiniga qo'shilish:</p>
+    <input id="join-code" type="text" placeholder="4 xonali kod kiriting" maxlength="4"/>
+    <button class="btn-join" style="padding:10px 32px;border-radius:10px;font-size:14px;font-weight:700;border:none;cursor:pointer;width:100%" onclick="joinGame()">Qo'shilish</button>
+  </div>
+  <button class="btn btn-gray" onclick="showMenu()" style="margin-top:8px">← Orqaga</button>
+</div>
+
+<!-- WAITING -->
+<div id="waiting-screen" class="screen hidden">
+  <h1>⏳ Kutilmoqda...</h1>
+  <div class="info-box">
+    <p>Do'stingizga shu kodni yuboring:</p>
+    <div class="game-id-display" id="waiting-code">----</div>
+    <p style="font-size:13px;color:#a0d0a0">Do'stingiz kodni kiritib qo'shilsin!</p>
+  </div>
+  <button class="btn btn-gray" onclick="showMenu()">← Bekor qilish</button>
+</div>
+
+<!-- GAME -->
+<div id="game-screen" class="screen hidden">
+  <div class="top-bar">
+    <div class="score">Sizda<b id="p-count">6</b></div>
+    <div class="score">Tur<b id="turn-num">1</b></div>
+    <div class="score" id="opp-score-label">Botda<b id="opp-count">6</b></div>
+    <div class="score">Qoldi<b id="deck-count">24</b></div>
+  </div>
+
+  <div class="bot-area">
+    <div style="font-size:20px" id="opp-icon">🤖</div>
+    <div style="color:#c0e0c0;font-size:12px"><b id="opp-count2">6</b> ta karta</div>
+    <div id="opp-cards" style="display:flex;gap:3px;margin-left:auto"></div>
+    <div id="phase-badge" class="phase-badge attack-badge">Siz uring</div>
+  </div>
+
+  <div class="trump-area">
+    <div class="trump-label">Kozir:</div>
+    <div id="trump-display"></div>
+    <div class="trump-label" id="trump-suit"></div>
+  </div>
+
+  <div class="felt">
+    <div class="felt-label">Stol</div>
+    <div id="board-cards" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;justify-content:center"></div>
+  </div>
+
+  <div class="hand-area">
+    <div class="hand-label" id="hand-label">Sizning qo'lingiz:</div>
+    <div class="hand-tiles" id="hand-cards"></div>
+    <div class="btn-row">
+      <button class="btn btn-green" id="btn-attack" onclick="doAttack()">Ur</button>
+      <button class="btn btn-green" id="btn-defend" onclick="doDefend()">Himoya qilish</button>
+      <button class="btn btn-yellow" id="btn-take" onclick="doTake()">Kartalarni ol</button>
+      <button class="btn btn-red" id="btn-end" onclick="doEndTurn()">Turni tugat</button>
+      <button class="btn btn-gray" onclick="showMenu()">Menyu</button>
+    </div>
+  </div>
+
+  <div class="status" id="status">O'yin boshlandi!</div>
+</div>
+
+<script>
+const SERVER = 'ws://213.199.39.147:8765';
+const SUITS=['♠','♥','♦','♣'];
+const VALS=['6','7','8','9','10','J','Q','K','A'];
+const RED=new Set(['♥','♦']);
+function vi(v){return VALS.indexOf(v);}
+
+let ws=null, gameId=null, playerIdx=0, gameMode='bot';
+let hand=[], trump=null, ts='', board=[], bdef=[], attacker=0, phase='attack', turnNum=1, oppCount=6, deckCount=24;
+let selected=null;
+
+// BOT game state
+let botHand=[], deck=[];
+
+function showMenu(){
+  if(ws){ws.close();ws=null;}
+  show('menu-screen');
+}
+function showMultiMenu(){show('multi-screen');}
+function show(id){
+  ['menu-screen','multi-screen','waiting-screen','game-screen'].forEach(s=>{
+    document.getElementById(s).classList.add('hidden');
+  });
+  document.getElementById(id).classList.remove('hidden');
+}
+
+// ===== BOT O'YIN =====
+function makeDeck(){
+  let d=[];
+  SUITS.forEach(s=>VALS.forEach(v=>d.push({s,v})));
+  return d.sort(()=>Math.random()-0.5);
+}
+
+function startBot(){
+  gameMode='bot';
+  playerIdx=0;
+  deck=makeDeck();
+  hand=deck.splice(0,6);
+  botHand=deck.splice(0,6);
+  trump=deck[deck.length-1];
+  ts=trump.s;
+  board=[];bdef=[];attacker=0;phase='attack';turnNum=1;selected=null;
+  oppCount=botHand.length;deckCount=deck.length;
+  document.getElementById('opp-icon').textContent='🤖';
+  document.getElementById('opp-score-label').innerHTML='Botda<b id="opp-count">'+botHand.length+'</b>';
+  show('game-screen');
+  renderGame();
+  setStatus('O\'yin boshlandi! Siz birinchi uring.');
+  updateBtns();
+}
+
+function canAttack(c){
+  if(!board.length) return true;
+  return [...board,...bdef].some(b=>b.v===c.v);
+}
+
+function canDefend(def,atk){
+  if(def.s===atk.s&&vi(def.v)>vi(atk.v)) return true;
+  if(def.s===ts&&atk.s!==ts) return true;
+  return false;
+}
+
+function botCanContinue(){
+  return botHand.some(c=>canAttack(c))&&board.length<6;
+}
+
+function botDrawCards(){
+  while(botHand.length<6&&deck.length) botHand.push(deck.pop());
+  while(hand.length<6&&deck.length) hand.push(deck.pop());
+}
+
+function botDefendStep(){
+  const atk=board[bdef.length];
+  let ok=false;
+  for(let i=0;i<botHand.length;i++){
+    if(canDefend(botHand[i],atk)){
+      bdef.push(botHand.splice(i,1)[0]);
+      ok=true;break;
+    }
+  }
+  if(!ok){
+    botHand.push(...board,...bdef);
+    board=[];bdef=[];phase='attack';attacker=0;
+    while(hand.length<6&&deck.length) hand.push(deck.pop());
+    setStatus('Bot himoya qila olmadi — kartalarni oldi! Siz yana uring.');
+    renderGame();updateBtns();
+  } else {
+    phase='attack';attacker=0;
+    if(botCanContinue()){
+      setStatus('Bot himoya qildi! Yana uring yoki "Turni tugat" bosing.');
+    } else {
+      setStatus('Bot himoya qildi! Yana uring yoki "Turni tugat" bosing.');
+    }
+    renderGame();updateBtns();
+  }
+  checkBotWin();
+}
+
+function botAttackStep(){
+  if(!botHand.length){checkBotWin();return;}
+  const sorted=[...botHand].sort((a,b)=>{
+    if(a.s===ts&&b.s!==ts) return 1;
+    if(b.s===ts&&a.s!==ts) return -1;
+    return vi(a.v)-vi(b.v);
+  });
+  const c=sorted[0];
+  botHand.splice(botHand.indexOf(c),1);
+  board.push(c);phase='defend';attacker=1;
+  setStatus(`Bot ${c.v}${c.s} tashladi! Himoya qiling yoki "Kartalarni ol" bosing.`);
+  renderGame();updateBtns();
+}
+
+function checkBotWin(){
+  if(!hand.length&&!deck.length){
+    setStatus('🏆 TABRIKLAYMAN! Siz g\'olib bo\'ldingiz! 🎉');
+    disableAllBtns();return true;
+  }
+  if(!botHand.length&&!deck.length){
+    setStatus('😔 Bot g\'olib bo\'ldi! Qayta urinish uchun Menyu bosing.');
+    disableAllBtns();return true;
+  }
+  return false;
+}
+
+function doAttack(){
+  if(gameMode==='bot'){
+    if(selected===null){setStatus('Karta tanlang!');return;}
+    const c=hand[selected];
+    if(!canAttack(c)){setStatus('Bu kartani qo\'yib bo\'lmaydi!');return;}
+    board.push(hand.splice(selected,1)[0]);
+    selected=null;phase='defend';attacker=1;
+    renderGame();updateBtns();
+    setStatus('Karta qo\'ydingiz! Bot himoya qilmoqda...');
+    setTimeout(botDefendStep,900);
+  } else {
+    if(selected===null){setStatus('Karta tanlang!');return;}
+    sendMove('attack', hand[selected]);
+    hand.splice(selected,1);
+    selected=null;
+  }
+}
+
+function doDefend(){
+  if(gameMode==='bot'){
+    if(selected===null){setStatus('Karta tanlang!');return;}
+    const c=hand[selected];
+    const atk=board[bdef.length];
+    if(!atk){setStatus('Himoya shart emas!');return;}
+    if(!canDefend(c,atk)){setStatus('Bu karta bilan himoya qilib bo\'lmaydi!');return;}
+    bdef.push(hand.splice(selected,1)[0]);
+    selected=null;
+    if(bdef.length===board.length){
+      renderGame();updateBtns();
+      setTimeout(()=>{
+        if(botCanContinue()){
+          const c2=botHand.filter(c=>canAttack(c))[0];
+          botHand.splice(botHand.indexOf(c2),1);
+          board.push(c2);phase='defend';attacker=1;
+          setStatus(`Bot ${c2.v}${c2.s} qo'shdi! Himoya qiling.`);
+          renderGame();updateBtns();
+        } else {
+          board=[];bdef=[];attacker=1;phase='attack';turnNum++;
+          botDrawCards();
+          setStatus('Bot tashlaydigan kartasi qolmadi — tur tugadi! Endi SIZ uring.');
+          renderGame();updateBtns();
+          checkBotWin();
+        }
+      },600);
+    } else {renderGame();updateBtns();}
+  } else {
+    if(selected===null){setStatus('Karta tanlang!');return;}
+    sendMove('defend', hand[selected]);
+    hand.splice(selected,1);
+    selected=null;
+  }
+}
+
+function doTake(){
+  if(gameMode==='bot'){
+    botHand.push(...board,...bdef);
+    board=[];bdef=[];phase='attack';attacker=1;turnNum++;
+    while(botHand.length<6&&deck.length) botHand.push(deck.pop());
+    setStatus('Kartalarni oldingiz. Bot endi yana ururdi...');
+    renderGame();updateBtns();
+    setTimeout(botAttackStep,1000);
+  } else {
+    sendMove('take',null);
+  }
+}
+
+function doEndTurn(){
+  if(gameMode==='bot'){
+    board=[];bdef=[];attacker=1;phase='attack';turnNum++;
+    botDrawCards();
+    setStatus('Tur tugadi! Bot endi ururdi...');
+    renderGame();updateBtns();
+    setTimeout(botAttackStep,1000);
+    checkBotWin();
+  } else {
+    sendMove('end_turn',null);
+  }
+}
+
+// ===== ONLINE O'YIN =====
+function connectWS(onOpen){
+  ws=new WebSocket(SERVER);
+  ws.onopen=onOpen;
+  ws.onmessage=e=>{
+    const data=JSON.parse(e.data);
+    handleMsg(data);
+  };
+  ws.onerror=()=>setStatus('Server bilan bog\'lanishda xato!');
+  ws.onclose=()=>console.log('WS yopildi');
+}
+
+function createGame(){
+  gameMode='multi';
+  connectWS(()=>{
+    ws.send(JSON.stringify({action:'create'}));
+  });
+}
+
+function joinGame(){
+  const code=document.getElementById('join-code').value.trim();
+  if(!code||code.length!==4){setStatus('4 xonali kod kiriting!');return;}
+  gameMode='multi';
+  connectWS(()=>{
+    ws.send(JSON.stringify({action:'join',game_id:code}));
+  });
+}
+
+function handleMsg(data){
+  if(data.type==='created'){
+    gameId=data.game_id;
+    playerIdx=0;
+    document.getElementById('waiting-code').textContent=gameId;
+    show('waiting-screen');
+  }
+  else if(data.type==='start'||data.type==='update'){
+    if(data.type==='start'){
+      playerIdx=data.player!==undefined?data.player:playerIdx;
+      show('game-screen');
+      document.getElementById('opp-icon').textContent='👥';
+      document.getElementById('opp-score-label').innerHTML='Raqibda<b id="opp-count">'+data.opp_count+'</b>';
+    }
+    hand=data.hand||hand;
+    trump=data.trump||trump;
+    ts=trump.s;
+    board=data.board||[];
+    bdef=data.bdef||[];
+    attacker=data.attacker||0;
+    phase=data.phase||'attack';
+    turnNum=data.turn||turnNum;
+    oppCount=data.opp_count||0;
+    deckCount=data.deck_count||0;
+    selected=null;
+
+    if(data.win!==null&&data.win!==undefined){
+      if(data.win===playerIdx){
+        setStatus('🏆 TABRIKLAYMAN! Siz g\'olib bo\'ldingiz! 🎉');
+      } else {
+        setStatus('😔 Raqibingiz g\'olib bo\'ldi! Qayta urinish uchun Menyu bosing.');
+      }
+      disableAllBtns();
+    } else {
+      renderGame();
+      updateBtns();
+      updateOnlineStatus();
+    }
+  }
+  else if(data.type==='error'){
+    setStatus('Xato: '+data.msg);
+  }
+}
+
+function sendMove(move, tile){
+  if(!ws) return;
+  ws.send(JSON.stringify({
+    action:'move',
+    game_id:gameId,
+    player:playerIdx,
+    move:move,
+    tile:tile
+  }));
+}
+
+function updateOnlineStatus(){
+  const myTurn=(attacker===playerIdx&&phase==='attack')||(attacker!==playerIdx&&phase==='defend');
+  if(attacker===playerIdx&&phase==='attack'){
+    setStatus('Sizning navbatingiz! Karta tanlang va "Ur" bosing.');
+  } else if(attacker!==playerIdx&&phase==='defend'){
+    setStatus('Raqibingiz urdi! Himoya qiling yoki "Kartalarni ol" bosing.');
+  } else if(attacker===playerIdx&&phase==='defend'){
+    setStatus('Raqibingiz himoya qilmoqda...');
+  } else {
+    setStatus('Raqibingizning navbati...');
+  }
+}
+
+// ===== RENDER =====
+function cardEl(c,idx,clickable){
+  const el=document.createElement('div');
+  el.className='card'+(clickable?' playable':'');
+  if(clickable) el.onclick=()=>selectCard(idx);
+  const col=RED.has(c.s)?'red':'black';
+  el.innerHTML=`<div class="cv ${col}">${c.v}${c.s}</div><div class="cs ${col}">${c.s}</div><div class="cvb ${col}">${c.v}${c.s}</div>`;
+  return el;
+}
+
+function backCard(){
+  const el=document.createElement('div');
+  el.className='card back';
+  return el;
+}
+
+function selectCard(i){selected=(selected===i)?null:i;renderGame();}
+
+function renderGame(){
+  if(!document.getElementById('p-count')) return;
+  document.getElementById('p-count').textContent=hand.length;
+  document.getElementById('turn-num').textContent=turnNum;
+  document.getElementById('deck-count').textContent=gameMode==='bot'?deck.length:deckCount;
+
+  const oppC=gameMode==='bot'?botHand.length:oppCount;
+  document.getElementById('opp-count2').textContent=oppC;
+  const oc2=document.getElementById('opp-count');
+  if(oc2) oc2.textContent=oppC;
+
+  const tc=document.getElementById('trump-display');
+  tc.innerHTML='';
+  if(trump) tc.appendChild(cardEl(trump,null,false));
+  document.getElementById('trump-suit').textContent=(ts||'')+' kozir';
+
+  const oc=document.getElementById('opp-cards');
+  oc.innerHTML='';
+  for(let i=0;i<Math.min(oppC,8);i++) oc.appendChild(backCard());
+
+  const badge=document.getElementById('phase-badge');
+  const isMyAttack=attacker===playerIdx&&phase==='attack';
+  badge.className='phase-badge '+(isMyAttack?'attack-badge':'defend-badge');
+  badge.textContent=isMyAttack?'Siz uring':'Him qiling';
+
+  const hc=document.getElementById('hand-cards');
+  hc.innerHTML='';
+  hand.forEach((c,i)=>{
+    let ok=false;
+    if(gameMode==='bot'){
+      if(attacker===0&&phase==='attack') ok=canAttack(c);
+      else if(attacker===1&&phase==='defend') ok=board.length>bdef.length&&canDefend(c,board[bdef.length]);
+    } else {
+      if(attacker===playerIdx&&phase==='attack') ok=canAttack(c);
+      else if(attacker!==playerIdx&&phase==='defend') ok=board.length>bdef.length&&canDefend(c,board[bdef.length]);
+    }
+    const el=cardEl(c,i,ok);
+    if(selected===i) el.classList.add('selected');
+    hc.appendChild(el);
+  });
+
+  const boardEl=document.getElementById('board-cards');
+  boardEl.innerHTML='';
+  board.forEach((c,i)=>{
+    boardEl.appendChild(cardEl(c,null,false));
+    if(bdef[i]){
+      const def=cardEl(bdef[i],null,false);
+      def.style.marginLeft='-18px';
+      def.style.marginTop='8px';
+      boardEl.appendChild(def);
+    }
+  });
+}
+
+function updateBtns(){
+  if(!document.getElementById('btn-attack')) return;
+  let canAtk=false,canDef=false,canTake=false,canEnd=false;
+  if(gameMode==='bot'){
+    canAtk=attacker===0&&phase==='attack';
+    canDef=attacker===1&&phase==='defend';
+    canTake=attacker===1&&phase==='defend';
+    canEnd=attacker===0&&phase==='attack'&&board.length>0;
+  } else {
+    canAtk=attacker===playerIdx&&phase==='attack';
+    canDef=attacker!==playerIdx&&phase==='defend';
+    canTake=attacker!==playerIdx&&phase==='defend';
+    canEnd=attacker===playerIdx&&phase==='attack'&&board.length>0;
+  }
+  document.getElementById('btn-attack').disabled=!canAtk;
+  document.getElementById('btn-defend').disabled=!canDef;
+  document.getElementById('btn-take').disabled=!canTake;
+  document.getElementById('btn-end').disabled=!canEnd;
+}
+
+function disableAllBtns(){
+  ['btn-attack','btn-defend','btn-take','btn-end'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.disabled=true;
+  });
+}
+
+function setStatus(msg){
+  const el=document.getElementById('status');
+  if(el) el.textContent=msg;
+}
+</script>
+</body>
+</html>
