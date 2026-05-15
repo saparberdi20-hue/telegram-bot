@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Mahjong Blast 🀄</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
+
+  :root {
+    --gold: #FFD700; --red: #FF4757; --green: #2ED573;
+    --blue: #1E90FF; --orange: #FF6B35;
+    --bg: #0F0C29; --bg2: #302B63; --bg3: #24243E;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overflow:hidden; }
+
+  body {
+    font-family:'Nunito',sans-serif;
+    background: linear-gradient(135deg,var(--bg) 0%,var(--bg2) 50%,var(--bg3) 100%);
+    display:flex; flex-direction:column; align-items:center;
+    justify-content:flex-start; padding:10px;
+    color:white; touch-action:none;
+  }
+
+  body::before {
+    content:''; position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(168,85,247,.18) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 80%, rgba(30,144,255,.18) 0%, transparent 55%);
+    pointer-events:none; z-index:0;
+  }
+
+  .game-wrapper {
+    position:relative; z-index:1; width:100%; max-width:460px;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+
+  header { text-align:center; }
+  header h1 {
+    font-family:'Fredoka One',cursive; font-size:2.2rem;
+    background:linear-gradient(135deg,#FFD700,#FF6B35,#FF4757);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    filter:drop-shadow(0 0 16px rgba(255,215,0,.45)); letter-spacing:2px; line-height:1;
+  }
+  header p { color:rgba(255,255,255,.5); font-size:.75rem; margin-top:2px; }
+
+  .stats-bar { display:flex; gap:8px; width:100%; }
+  .stat-box {
+    flex:1; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.13);
+    border-radius:14px; padding:7px 10px; text-align:center; backdrop-filter:blur(8px);
+  }
+  .stat-label { font-size:.6rem; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,.45); }
+  .stat-value { font-family:'Fredoka One',cursive; font-size:1.55rem; line-height:1.1; }
+  #score-val { color:var(--gold); } #moves-val { color:var(--green); } #level-val { color:var(--blue); }
+
+  .progress-bar-wrap {
+    width:100%; background:rgba(255,255,255,.1); border-radius:20px;
+    height:8px; overflow:hidden; border:1px solid rgba(255,255,255,.1);
+  }
+  #progress-bar {
+    height:100%; background:linear-gradient(90deg,var(--gold),var(--orange),var(--red));
+    border-radius:20px; transition:width .5s ease; box-shadow:0 0 10px rgba(255,215,0,.5); width:0%;
+  }
+
+  /* BOARD */
+  .board-container {
+    width:100%; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+    border-radius:22px; padding:12px; backdrop-filter:blur(10px);
+    box-shadow:0 20px 50px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12);
+    touch-action:none; position:relative;
+  }
+
+  #board {
+    display:grid; grid-template-columns:repeat(6,1fr);
+    gap:7px; touch-action:none; position:relative;
+  }
+
+  /* TILES */
+  .tile {
+    aspect-ratio:1; border-radius:14px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.9rem; border:2.5px solid rgba(255,255,255,.22);
+    user-select:none; position:relative; overflow:hidden;
+    transition:transform .15s cubic-bezier(.34,1.56,.64,1),
+                box-shadow .15s ease, filter .15s ease;
+    will-change:transform;
+  }
+
+  .tile::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:38%;
+    background:rgba(255,255,255,.28); border-radius:12px 12px 50% 50%;
+    pointer-events:none;
+  }
+
+  .tile.selected {
+    transform:scale(1.14) translateY(-4px);
+    box-shadow:0 0 0 3.5px white, 0 10px 28px rgba(255,255,255,.4);
+    z-index:20; animation:pulse-sel .55s ease infinite alternate;
+  }
+  @keyframes pulse-sel {
+    from { box-shadow:0 0 0 3px white,0 10px 22px rgba(255,255,255,.3); }
+    to   { box-shadow:0 0 0 4px white,0 14px 36px rgba(255,255,255,.6); }
+  }
+
+  .tile.empty {
+    background:rgba(255,255,255,.03) !important;
+    border-color:rgba(255,255,255,.04); cursor:default; font-size:0;
+  }
+
+  .tile.matched { animation:blast .4s ease forwards; }
+  @keyframes blast {
+    0%   { transform:scale(1); opacity:1; }
+    35%  { transform:scale(1.6); opacity:.85; filter:brightness(2.5); }
+    100% { transform:scale(0) rotate(200deg); opacity:0; }
+  }
+
+  .tile.hint { animation:hintPulse .45s ease 3; }
+  @keyframes hintPulse {
+    0%,100% { filter:brightness(1); }
+    50% { filter:brightness(2.2) saturate(1.5); }
+  }
+
+  /* DRAG GHOST — floating tile that follows finger */
+  #drag-ghost {
+    position:fixed; pointer-events:none; z-index:99;
+    display:none; align-items:center; justify-content:center;
+    font-size:2.2rem; border-radius:14px;
+    border:3px solid white;
+    box-shadow:0 12px 40px rgba(0,0,0,.5), 0 0 0 4px rgba(255,255,255,.3);
+    opacity:.92; will-change:transform;
+    transition:none;
+  }
+
+  /* Tile that's being dragged — dimmed */
+  .tile.dragging {
+    opacity:.35; transform:scale(.9); filter:brightness(.6);
+    transition:opacity .1s, transform .1s;
+  }
+
+  /* Target tile highlighted during drag */
+  .tile.drag-target {
+    transform:scale(1.08);
+    box-shadow:0 0 0 3px rgba(255,255,255,.8), 0 8px 24px rgba(255,255,255,.3);
+    filter:brightness(1.3);
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+
+  /* Tile colors */
+  .t1{background:linear-gradient(135deg,#FF4757,#FF6B81);}
+  .t2{background:linear-gradient(135deg,#2ED573,#7BED9F);}
+  .t3{background:linear-gradient(135deg,#1E90FF,#74B9FF);}
+  .t4{background:linear-gradient(135deg,#FFD700,#FFA502);}
+  .t5{background:linear-gradient(135deg,#A855F7,#C084FC);}
+  .t6{background:linear-gradient(135deg,#FF6B35,#FFA07A);}
+  .t7{background:linear-gradient(135deg,#00CEC9,#55EFC4);}
+
+  /* SWAP SLIDE ANIMATION */
+  .tile.slide-right  { animation:slideRight .22s cubic-bezier(.34,1.2,.64,1) forwards; }
+  .tile.slide-left   { animation:slideLeft  .22s cubic-bezier(.34,1.2,.64,1) forwards; }
+  .tile.slide-down   { animation:slideDown  .22s cubic-bezier(.34,1.2,.64,1) forwards; }
+  .tile.slide-up     { animation:slideUp    .22s cubic-bezier(.34,1.2,.64,1) forwards; }
+
+  @keyframes slideRight { 0%{transform:translateX(-60%)}  100%{transform:translateX(0)} }
+  @keyframes slideLeft  { 0%{transform:translateX(60%)}   100%{transform:translateX(0)} }
+  @keyframes slideDown  { 0%{transform:translateY(-60%)}  100%{transform:translateY(0)} }
+  @keyframes slideUp    { 0%{transform:translateY(60%)}   100%{transform:translateY(0)} }
+
+  .swipe-hint { font-size:.7rem; color:rgba(255,255,255,.38); text-align:center; }
+
+  .controls { display:flex; gap:10px; width:100%; }
+  .btn {
+    flex:1; padding:11px 10px; border:none; border-radius:14px;
+    font-family:'Fredoka One',cursive; font-size:1rem;
+    cursor:pointer; transition:transform .1s,box-shadow .1s;
+  }
+  .btn:active{transform:scale(.95);}
+  .btn-primary{background:linear-gradient(135deg,#FFD700,#FF6B35);color:#1a1a2e;box-shadow:0 5px 18px rgba(255,215,0,.3);}
+  .btn-secondary{background:rgba(255,255,255,.1);color:white;border:1px solid rgba(255,255,255,.2);}
+
+  .legend { display:flex; justify-content:center; gap:5px; flex-wrap:wrap; }
+  .legend-dot {
+    width:22px; height:22px; border-radius:7px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.85rem; border:1.5px solid rgba(255,255,255,.2);
+  }
+
+  /* OVERLAY */
+  .overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(10,8,30,.88); backdrop-filter:blur(12px);
+    z-index:100; align-items:center; justify-content:center;
+  }
+  .overlay.show{display:flex;}
+  .modal {
+    background:linear-gradient(135deg,#1a1a3e,#2d2d5e);
+    border:1px solid rgba(255,255,255,.15); border-radius:28px;
+    padding:36px 28px; text-align:center; max-width:310px; width:88%;
+    box-shadow:0 30px 80px rgba(0,0,0,.5);
+    animation:popIn .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn{from{transform:scale(.65);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .modal-emoji{font-size:3.2rem;margin-bottom:8px;display:block;}
+  .modal h2{
+    font-family:'Fredoka One',cursive;font-size:1.9rem;margin-bottom:8px;
+    background:linear-gradient(135deg,#FFD700,#FF6B35);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }
+  .modal p{color:rgba(255,255,255,.65);margin-bottom:18px;line-height:1.5;font-size:.88rem;}
+  .modal-score{font-family:'Fredoka One',cursive;font-size:2rem;color:var(--gold);display:block;margin:6px 0;}
+
+  .particle{position:fixed;pointer-events:none;z-index:55;font-size:1.4rem;animation:particleFly .85s ease forwards;}
+  @keyframes particleFly{from{transform:translate(0,0) scale(1.2);opacity:1;}to{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0;}}
+
+  .combo-text{
+    position:fixed;font-family:'Fredoka One',cursive;font-size:2.5rem;
+    color:var(--gold);text-shadow:0 0 24px rgba(255,215,0,.9);
+    pointer-events:none;z-index:60;animation:comboAnim 1s ease forwards;white-space:nowrap;
+  }
+  @keyframes comboAnim{
+    0%  {transform:translate(-50%,0) scale(.5);opacity:0;}
+    30% {transform:translate(-50%,-12px) scale(1.3);opacity:1;}
+    70% {transform:translate(-50%,-32px) scale(1);opacity:1;}
+    100%{transform:translate(-50%,-72px) scale(.8);opacity:0;}
+  }
+  @keyframes shake{
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-9px);}40%{transform:translateX(9px);}
+    60%{transform:translateX(-5px);}80%{transform:translateX(5px);}
+  }
+</style>
+</head>
+<body>
+
+<!-- Drag ghost element -->
+<div id="drag-ghost"></div>
+
+<div class="game-wrapper">
+  <header>
+    <h1>🀄 MAHJONG BLAST</h1>
+    <p>Bir xil kafelarni toping va portlating!</p>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat-box"><div class="stat-label">Ball</div><div class="stat-value" id="score-val">0</div></div>
+    <div class="stat-box"><div class="stat-label">Yurishlar</div><div class="stat-value" id="moves-val">25</div></div>
+    <div class="stat-box"><div class="stat-label">Daraja</div><div class="stat-value" id="level-val">1</div></div>
+  </div>
+
+  <div class="progress-bar-wrap"><div id="progress-bar"></div></div>
+
+  <div class="board-container" id="board-container">
+    <div id="board"></div>
+  </div>
+
+  <p class="swipe-hint">👆 Bosing yoki 👉 kartani suring — almashtirib portlating!</p>
+
+  <div class="controls">
+    <button class="btn btn-secondary" onclick="showHint()">💡 Maslahat</button>
+    <button class="btn btn-primary" onclick="newGame()">🔄 Yangi O'yin</button>
+  </div>
+
+  <div class="legend">
+    <div class="legend-dot t1">🐉</div>
+    <div class="legend-dot t2">🍀</div>
+    <div class="legend-dot t3">💎</div>
+    <div class="legend-dot t4">⭐</div>
+    <div class="legend-dot t5">🔮</div>
+    <div class="legend-dot t6">🔥</div>
+    <div class="legend-dot t7">❄️</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-win">
+  <div class="modal">
+    <span class="modal-emoji">🎉</span><h2>AJOYIB!</h2>
+    <p>Darajani muvaffaqiyatli yakunladingiz!</p>
+    <span class="modal-score" id="win-score">0</span>
+    <button class="btn btn-primary" style="width:100%" onclick="nextLevel()">Keyingi Daraja ▶</button>
+  </div>
+</div>
+<div class="overlay" id="overlay-lose">
+  <div class="modal">
+    <span class="modal-emoji">😢</span><h2>O'YIN TUGADI</h2>
+    <p>Yurishlar tugadi! Qaytadan urinib ko'ring.</p>
+    <span class="modal-score" id="lose-score">0</span>
+    <button class="btn btn-primary" style="width:100%" onclick="newGame()">🔄 Yangi O'yin</button>
+  </div>
+</div>
+
+<script>
+const COLS=6, ROWS=6;
+const TYPES=[
+  {cls:'t1',icon:'🐉'},{cls:'t2',icon:'🍀'},{cls:'t3',icon:'💎'},
+  {cls:'t4',icon:'⭐'},{cls:'t5',icon:'🔮'},{cls:'t6',icon:'🔥'},{cls:'t7',icon:'❄️'},
+];
+
+let board=[], selected=null;
+let score=0, moves=25, level=1, target=400, combo=0, busy=false;
+
+// ── Touch drag state ──
+let dragActive=false;
+let dragR=-1, dragC=-1;
+let dragGhostEl=document.getElementById('drag-ghost');
+let lastTargetR=-1, lastTargetC=-1;
+let touchId=null;
+
+function rand(n){return Math.floor(Math.random()*n);}
+function numTypes(){return Math.max(4,7-Math.floor((level-1)/3));}
+function newTileVal(){return rand(numTypes());}
+
+function wouldMatch(r,c,t){
+  if(c>=2&&board[r][c-1]===t&&board[r][c-2]===t)return true;
+  if(r>=2&&board[r-1][c]===t&&board[r-2][c]===t)return true;
+  return false;
+}
+
+function initBoard(){
+  board=[];
+  for(let r=0;r<ROWS;r++){
+    board[r]=[];
+    for(let c=0;c<COLS;c++){
+      let t; do{t=newTileVal();}while(wouldMatch(r,c,t));
+      board[r][c]=t;
+    }
+  }
+}
+
+// ── RENDER ──
+function renderBoard(){
+  const boardEl=document.getElementById('board');
+  boardEl.innerHTML='';
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const tile=document.createElement('div');
+      tile.className='tile';
+      const t=board[r][c];
+      if(t===-1){
+        tile.classList.add('empty');
+      } else {
+        tile.classList.add(TYPES[t].cls);
+        tile.textContent=TYPES[t].icon;
+        tile.dataset.r=r; tile.dataset.c=c;
+        tile.addEventListener('click',onTileClick);
+        tile.addEventListener('touchstart',onTouchStart,{passive:false});
+      }
+      boardEl.appendChild(tile);
+    }
+  }
+  // global touch handlers on board
+  const bEl=document.getElementById('board');
+  bEl.addEventListener('touchmove',onTouchMove,{passive:false});
+  bEl.addEventListener('touchend',onTouchEnd,{passive:true});
+  bEl.addEventListener('touchcancel',onTouchCancel,{passive:true});
+  updateProgress();
+}
+
+function getTileEl(r,c){
+  if(r<0||r>=ROWS||c<0||c>=COLS)return null;
+  return document.getElementById('board').children[r*COLS+c];
+}
+
+// ── CLICK (desktop) ──
+function onTileClick(e){
+  if(busy||moves<=0||dragActive)return;
+  const r=+e.currentTarget.dataset.r, c=+e.currentTarget.dataset.c;
+  if(board[r][c]===-1)return;
+  handleSelect(r,c);
+}
+
+function handleSelect(r,c){
+  if(!selected){
+    selected={r,c};
+    const el=getTileEl(r,c); if(el)el.classList.add('selected');
+  } else {
+    const prev=selected; clearSelected();
+    if(prev.r===r&&prev.c===c)return;
+    const dr=Math.abs(r-prev.r),dc=Math.abs(c-prev.c);
+    if(dr+dc===1){ doSwap(prev.r,prev.c,r,c); }
+    else { selected={r,c}; const el=getTileEl(r,c); if(el)el.classList.add('selected'); }
+  }
+}
+
+function clearSelected(){
+  if(selected){const el=getTileEl(selected.r,selected.c);if(el)el.classList.remove('selected');}
+  selected=null;
+}
+
+// ── TOUCH DRAG ──
+function onTouchStart(e){
+  if(busy||moves<=0)return;
+  e.preventDefault();
+  const touch=e.touches[0];
+  touchId=touch.identifier;
+  touchStartX=touch.clientX;
+  touchStartY=touch.clientY;
+  dragR=+e.currentTarget.dataset.r;
+  dragC=+e.currentTarget.dataset.c;
+  dragActive=false; // will be true once moved enough
+  lastTargetR=-1; lastTargetC=-1;
+
+  // Prep ghost
+  const srcEl=getTileEl(dragR,dragC);
+  const t=board[dragR][dragC];
+  if(!srcEl||t===-1)return;
+
+  const rect=srcEl.getBoundingClientRect();
+  const size=rect.width;
+
+  dragGhostEl.style.display='flex';
+  dragGhostEl.style.width=size+'px';
+  dragGhostEl.style.height=size+'px';
+  dragGhostEl.style.fontSize=(size*0.55)+'px';
+  dragGhostEl.className=''; // reset classes
+  dragGhostEl.style.display='flex';
+  dragGhostEl.classList.add(TYPES[t].cls);
+  dragGhostEl.textContent=TYPES[t].icon;
+  moveGhost(touch.clientX, touch.clientY, size);
+  dragGhostEl.style.opacity='0'; // hidden until moved
+}
+
+function onTouchMove(e){
+  if(busy||moves<=0)return;
+  e.preventDefault();
+
+  let touch=null;
+  for(let i=0;i<e.changedTouches.length;i++){
+    if(e.changedTouches[i].identifier===touchId){touch=e.changedTouches[i];break;}
+  }
+  if(!touch)return;
+
+  const srcEl=getTileEl(dragR,dragC);
+  if(!srcEl)return;
+  const rect=srcEl.getBoundingClientRect();
+  const size=rect.width;
+
+  const dx=touch.clientX-(rect.left+size/2);
+  const dy=touch.clientY-(rect.top+size/2);
+  const dist=Math.sqrt(dx*dx+dy*dy);
+
+  if(dist>10){
+    dragActive=true;
+    dragGhostEl.style.opacity='0.92';
+    srcEl.classList.add('dragging');
+  }
+
+  if(!dragActive)return;
+
+  moveGhost(touch.clientX,touch.clientY,size);
+
+  // Find which tile is under finger
+  const boardEl=document.getElementById('board');
+  const bRect=boardEl.getBoundingClientRect();
+  const cellW=bRect.width/COLS, cellH=bRect.height/ROWS;
+  const col=Math.floor((touch.clientX-bRect.left)/cellW);
+  const row=Math.floor((touch.clientY-bRect.top)/cellH);
+
+  // Only allow adjacent
+  const dr=row-dragR, dc=col-dragC;
+  const isAdj=(Math.abs(dr)+Math.abs(dc)===1);
+  const inBounds=row>=0&&row<ROWS&&col>=0&&col<COLS;
+
+  // Clear previous target highlight
+  if(lastTargetR!==-1){
+    const prev=getTileEl(lastTargetR,lastTargetC);
+    if(prev)prev.classList.remove('drag-target');
+  }
+
+  if(inBounds&&isAdj&&board[row][col]!==-1){
+    lastTargetR=row; lastTargetC=col;
+    const targetEl=getTileEl(row,col);
+    if(targetEl)targetEl.classList.add('drag-target');
+  } else {
+    lastTargetR=-1; lastTargetC=-1;
+  }
+}
+
+function onTouchEnd(e){
+  let touch=null;
+  for(let i=0;i<e.changedTouches.length;i++){
+    if(e.changedTouches[i].identifier===touchId){touch=e.changedTouches[i];break;}
+  }
+
+  // Save state BEFORE endDrag clears everything
+  const wasDragging=dragActive;
+  const savedDragR=dragR, savedDragC=dragC;
+  const savedTargetR=lastTargetR, savedTargetC=lastTargetC;
+
+  endDrag();
+
+  if(!touch)return;
+  if(busy||moves<=0)return;
+
+  if(!wasDragging){
+    // Only select if it was a clean tap (finger barely moved)
+    const dx=touch.clientX-touchStartX, dy=touch.clientY-touchStartY;
+    if(Math.sqrt(dx*dx+dy*dy)<8){
+      handleSelect(savedDragR,savedDragC);
+    }
+    return;
+  }
+
+  if(savedTargetR!==-1&&savedTargetC!==-1){
+    clearSelected();
+    doSwap(savedDragR,savedDragC,savedTargetR,savedTargetC);
+  }
+}
+
+function onTouchCancel(){endDrag();}
+
+function endDrag(){
+  dragActive=false;
+  dragGhostEl.style.display='none';
+  dragGhostEl.style.opacity='0';
+  // Remove dragging class
+  const srcEl=getTileEl(dragR,dragC);
+  if(srcEl)srcEl.classList.remove('dragging');
+  // Remove target highlight
+  if(lastTargetR!==-1){
+    const prev=getTileEl(lastTargetR,lastTargetC);
+    if(prev)prev.classList.remove('drag-target');
+  }
+  lastTargetR=-1; lastTargetC=-1;
+}
+
+function moveGhost(cx,cy,size){
+  dragGhostEl.style.left=(cx-size/2)+'px';
+  dragGhostEl.style.top=(cy-size/2)+'px';
+}
+
+// ── SWAP & MATCH ──
+function doSwap(r1,c1,r2,c2){
+  busy=true; clearSelected();
+  [board[r1][c1],board[r2][c2]]=[board[r2][c2],board[r1][c1]];
+
+  // Slide animation direction
+  const dr=r2-r1, dc=c2-c1;
+  const dir1= dc>0?'slide-right': dc<0?'slide-left': dr>0?'slide-down':'slide-up';
+  const dir2= dc>0?'slide-left' : dc<0?'slide-right':dr>0?'slide-up':'slide-down';
+
+  renderBoard();
+
+  // Apply slide classes after render
+  requestAnimationFrame(()=>{
+    const e1=getTileEl(r1,c1), e2=getTileEl(r2,c2);
+    if(e1)e1.classList.add(dir2); // e1 moved to where e2 was → comes from opposite
+    if(e2)e2.classList.add(dir1);
+  });
+
+  moves--;
+  document.getElementById('moves-val').textContent=moves;
+
+  const matches=findMatches();
+  if(matches.length===0){
+    setTimeout(()=>{
+      [board[r1][c1],board[r2][c2]]=[board[r2][c2],board[r1][c1]];
+      renderBoard();
+      combo=0; busy=false;
+      shakeBoard();
+    },300);
+    return;
+  }
+  combo=0;
+  setTimeout(()=>processMatches(),260);
+}
+
+function shakeBoard(){
+  const bc=document.getElementById('board-container');
+  bc.style.animation='none'; bc.offsetHeight;
+  bc.style.animation='shake .32s ease';
+  setTimeout(()=>bc.style.animation='',400);
+}
+
+function findMatches(){
+  const matched=new Set();
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS-2;c++){
+      const t=board[r][c];
+      if(t!==-1&&t===board[r][c+1]&&t===board[r][c+2]){
+        let end=c+2; while(end+1<COLS&&board[r][end+1]===t)end++;
+        for(let k=c;k<=end;k++)matched.add(`${r},${k}`);
+      }
+    }
+  }
+  for(let c=0;c<COLS;c++){
+    for(let r=0;r<ROWS-2;r++){
+      const t=board[r][c];
+      if(t!==-1&&t===board[r+1][c]&&t===board[r+2][c]){
+        let end=r+2; while(end+1<ROWS&&board[end+1][c]===t)end++;
+        for(let k=r;k<=end;k++)matched.add(`${k},${c}`);
+      }
+    }
+  }
+  return [...matched].map(s=>{const[r,c]=s.split(',');return{r:+r,c:+c};});
+}
+
+function processMatches(){
+  const matches=findMatches();
+  if(matches.length===0){busy=false;checkGameState();return;}
+  combo++;
+  score+=matches.length*10*combo*level;
+  document.getElementById('score-val').textContent=score;
+  if(combo>=2)showCombo(combo);
+  showParticles(matches);
+  matches.forEach(({r,c})=>{
+    const el=getTileEl(r,c); if(el)el.classList.add('matched');
+    setTimeout(()=>{board[r][c]=-1;},330);
+  });
+  setTimeout(()=>{applyGravity();fillBoard();renderBoard();setTimeout(()=>processMatches(),175);},460);
+}
+
+function applyGravity(){
+  for(let c=0;c<COLS;c++){
+    const col=[];
+    for(let r=ROWS-1;r>=0;r--)if(board[r][c]!==-1)col.push(board[r][c]);
+    for(let r=ROWS-1;r>=0;r--)board[r][c]=col.length>0?col.shift():-1;
+  }
+}
+
+function fillBoard(){
+  for(let r=0;r<ROWS;r++)
+    for(let c=0;c<COLS;c++)
+      if(board[r][c]===-1)board[r][c]=newTileVal();
+}
+
+function updateProgress(){
+  document.getElementById('progress-bar').style.width=Math.min((score/target)*100,100)+'%';
+}
+
+function checkGameState(){
+  if(score>=target){
+    document.getElementById('win-score').textContent='⭐ '+score+' Ball';
+    document.getElementById('overlay-win').classList.add('show');
+  } else if(moves<=0){
+    document.getElementById('lose-score').textContent='💔 '+score+' Ball';
+    document.getElementById('overlay-lose').classList.add('show');
+  }
+}
+
+function nextLevel(){
+  document.getElementById('overlay-win').classList.remove('show');
+  level++; moves=25+level*2; target=level*400;
+  document.getElementById('level-val').textContent=level;
+  document.getElementById('moves-val').textContent=moves;
+  busy=false; combo=0; initBoard(); renderBoard();
+}
+
+function newGame(){
+  document.getElementById('overlay-win').classList.remove('show');
+  document.getElementById('overlay-lose').classList.remove('show');
+  score=0;level=1;moves=25;target=400;combo=0;busy=false;selected=null;
+  document.getElementById('score-val').textContent='0';
+  document.getElementById('moves-val').textContent='25';
+  document.getElementById('level-val').textContent='1';
+  initBoard(); renderBoard();
+}
+
+function showHint(){
+  if(busy)return;
+  const dirs=[[0,1],[1,0]];
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      for(const[dr,dc]of dirs){
+        const r2=r+dr,c2=c+dc;
+        if(r2>=ROWS||c2>=COLS)continue;
+        [board[r][c],board[r2][c2]]=[board[r2][c2],board[r][c]];
+        const m=findMatches();
+        [board[r][c],board[r2][c2]]=[board[r2][c2],board[r][c]];
+        if(m.length>0){
+          const e1=getTileEl(r,c),e2=getTileEl(r2,c2);
+          if(e1)e1.classList.add('hint'); if(e2)e2.classList.add('hint');
+          setTimeout(()=>{if(e1)e1.classList.remove('hint');if(e2)e2.classList.remove('hint');},1500);
+          return;
+        }
+      }
+    }
+  }
+}
+
+function showParticles(matches){
+  const boardRect=document.getElementById('board').getBoundingClientRect();
+  const cellW=boardRect.width/COLS,cellH=boardRect.height/ROWS;
+  const emojis=['✨','💫','⚡','🌟','💥','🎇','🔥'];
+  matches.slice(0,9).forEach(({r,c})=>{
+    for(let i=0;i<3;i++){
+      const p=document.createElement('div'); p.className='particle';
+      p.textContent=emojis[rand(emojis.length)];
+      const x=boardRect.left+c*cellW+cellW/2, y=boardRect.top+r*cellH+cellH/2;
+      p.style.left=x+'px'; p.style.top=y+'px';
+      const angle=rand(360)*Math.PI/180, dist=55+rand(90);
+      p.style.setProperty('--dx',Math.cos(angle)*dist+'px');
+      p.style.setProperty('--dy',(Math.sin(angle)*dist-55)+'px');
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(),900);
+    }
+  });
+}
+
+function showCombo(n){
+  const el=document.createElement('div'); el.className='combo-text';
+  const labels=['','','COMBO!','SUPER!','MEGA!','ULTRA!','GODLIKE!'];
+  el.textContent=(labels[n]||'INSANE!')+' x'+n;
+  el.style.left='50%'; el.style.top='40%';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+
+initBoard();
+renderBoard();
+</script>
+</body>
+</html>
